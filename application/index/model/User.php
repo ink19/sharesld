@@ -16,6 +16,7 @@ class User extends Model{
         'username' => 'text',           //用户姓名
         'password' => 'text',           //用户密码,md5加密
         'email' => 'text',              //用户邮箱
+        'status' => 'integer',          //用户状态,0为正常状态
         'create_time' => 'integer',     //创建时间
         'login_time' => 'integer',      //登入时间
         'rand_code' => 'integer'        //随机参数
@@ -30,6 +31,8 @@ class User extends Model{
     protected $insert = ['create_time'];
 
     protected $lastResult;
+
+    protected $statusString = ['正常', '未激活', '已锁定'];
 
     /**
     * 返回上次操作的值
@@ -57,9 +60,44 @@ class User extends Model{
         ];
 
         if($result = self::get($map)) {
-            $this->lastResult = $result;
-            return true;
+            if(!$result->status) {
+                $this->lastResult = $result->toArray();
+                return true;
+            } else {
+                $this->lastResult = $this->statusString[$result->status];
+                return false;
+            }
         } else {
+            $this->lastResult = "用户名或密码错误";
+            return false;
+        }
+    }
+
+    /**
+    * 检查登入状态
+    * 
+    * @param    string $username
+    * @param    string $hashPassword
+    * @return   boolean
+    */
+    public function CheckLogin(){
+        $this->lastResult = null;
+
+        $map = [
+            'username' => $username,
+            'password' => md5($password)
+        ];
+
+        if($result = self::get($map)) {
+            if(!$result->status) {
+                $this->lastResult = $result->toArray();
+                return true;
+            } else {
+                $this->lastResult = $this->statusString[$result->status];
+                return false;
+            }
+        } else {
+            $this->lastResult = "用户名或密码错误";
             return false;
         }
     }
