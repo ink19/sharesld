@@ -8,7 +8,9 @@ use think\Model;
 */
 
 class Check extends Model{
-    $field = ['id', 'user_id', 'code', 'func'];
+    protected $field = ['id', 'user_id', 'code', 'func', 'add_time'];
 
-    $
+    protected $insert = ['add_time', 'code'];
+
+    
 }

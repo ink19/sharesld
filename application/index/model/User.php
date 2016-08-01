@@ -28,11 +28,11 @@ class User extends Model{
 
     protected $auto = ['password', 'rand_code'];
 
-    protected $insert = ['create_time'];
+    protected $insert = ['create_time', 'status'];
 
     protected $lastResult;
 
-    protected $statusString = ['正常', '未激活', '已锁定'];
+    protected $statusString = ['正常', '未激活', '已锁定']; //翻译status字段
 
     /**
     * 返回上次操作的值
@@ -170,6 +170,33 @@ class User extends Model{
         }
     }
 
+
+    /**
+    * 修改状态
+    * 
+    * @param    int $id
+    * @param    int $status
+    * @return   boolean
+    */
+    public function ChangeUserStatus($id, $status){
+        $this->lastResult = null;
+        $user = self::get($id);
+
+        if($user) {
+            $user->status = $status;
+            if($user->save()) {
+                $this->lastResult = $user->toArray();
+                return true;
+            } else {
+                $this->lastResult = "数据库错误";
+                return false;
+            }
+        } else {
+            $this->lastResult = "未找到该用户";
+            return false;
+        }
+    }
+
     /**
     * 自动修改密码
     */
@@ -194,5 +221,13 @@ class User extends Model{
     */
     protected function SetCreateTimeAttr(){
       return time();  
+    }
+
+    /**
+    * 添加状态
+    *    
+    */
+    public function SetStatusAttr(){
+        return 1;
     }
 }
