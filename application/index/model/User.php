@@ -2,16 +2,29 @@
 namespace app\index\model;
 
 use think\Model;
-
+use app\index\validate\User as UserValidate;
 
 /**
 * 用户类
-* 字段 id username password email create_time login_time
+* 字段 id username password email create_time login_time rand_code
 * @author myzly<nkzxwgr@163.com>
 */
 
 class User extends Model{
-    
+    protected $type = [
+        'id' => 'integer',              //用户ID
+        'username' => 'text',           //用户姓名
+        'password' => 'text',           //用户密码,md5加密
+        'email' => 'text',              //用户邮箱
+        'create_time' => 'integer',     //创建时间
+        'login_time' => 'integer',      //登入时间
+        'rand_code' => 'integer'        //随机参数
+    ];
+
+    protected $field = ['id', 'username', 'password', 'email', 'create_time', 'login_time', 'rand_code'];
+
+    protected $pk = 'id';
+
     protected $auto = ['password', 'rand_code'];
 
     protected $insert = ['create_time'];
@@ -42,7 +55,8 @@ class User extends Model{
             'username' => $username,
             'password' => md5($password)
         ];
-        if($result = $this->where($map)->find()) {
+
+        if($result = self::get($map)) {
             $this->lastResult = $result;
             return true;
         } else {
@@ -69,10 +83,18 @@ class User extends Model{
             'email' => $email
         ];
 
-        if($id = $this->save($data)) {
-            $this->lastResult = $this->find($id)->toArray();
-            return true;
+        $validataUser = new UserValidate;
+
+        if($validataUser->scene('add')->checK($data)) {
+            if($id = $this->save($data)) {
+                $this->lastResult = $this->find($id);
+                return true;
+            } else {
+                $this->lastResult = "数据库发生错误";
+                return false;
+            }
         } else {
+            $this->lastResult = $validataUser->getError();
             return false;
         }
     }
@@ -84,8 +106,9 @@ class User extends Model{
     * @param    array $data     资料
     * @return   boolean
     */
-    public function ChangUserInfo($id, $data){
+    public function ChangeUserInfo($id, $data){
         $user = self::find($id);
+        $validataUser = new UserValidate;
 
         if($data['email']) {
             $user->email = $data['email'];
@@ -95,10 +118,16 @@ class User extends Model{
             $user->password = $data['password'];
         }
 
-        if($user->save()) {
-            $this->lastResult = $user->toArray();
-            return true;
+        if($validataUser->scene('edit')->check($user->toArray())) {
+            if($user->save()) {
+                $this->lastResult = $user;
+                return true;
+            } else {
+                $this->lastResult = "数据库发生错误";
+                return false;
+            }
         } else {
+            $this->lastResult = $validataUser->getError();
             return false;
         }
     }
