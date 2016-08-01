@@ -8,11 +8,11 @@ use think\Model;
 */
 
 class FirstDomain extends Model{
-    protected $field = ['id', 'first_domain', 'dns_server', 'data', 'importent_sub_domain'];
+    protected $field = ['id', 'first_domain', 'dns_server', 'data', 'important_sub_domain'];
 
     protected $type = [
         'data' => 'json',
-        'importent_sub_domain' => 'json'
+        'important_sub_domain' => 'json'
     ];
 
     protected $pk = 'id';
@@ -37,7 +37,7 @@ class FirstDomain extends Model{
             $this->lastResult = "已添加该域名";
             return fasle;
         } else {
-            if($result = $this->save(['first_domain' => $first_domain, 'dns_server' => $dnsServer, 'data' => $data, 'importent_sub_domain' => '[]'])) {
+            if($result = $this->save(['first_domain' => $first_domain, 'dns_server' => $dnsServer, 'data' => $data, 'important_sub_domain' => '[]'])) {
                 $this->lastResult = self::get(['first_domain' => $firstDomain])->toArray();
                 return true;
             } else {
@@ -84,7 +84,7 @@ class FirstDomain extends Model{
         $this->lastResult = null;
         
         if($firstDomain = self::get($id)) {
-            $firstDomain->importent_sub_domain = $importantSubDomain;
+            $firstDomain->important_sub_domain = $importantSubDomain;
 
             if($firstDomain->save()) {
                 $this->lastResult = $firstDomain->toArray();
@@ -122,9 +122,26 @@ class FirstDomain extends Model{
     * 验证是否为保留域名
     * 
     * @param    int     $id
-    * @return   string  $
+    * @return   string  $subDomain
     */
-    public function VerifyImportant(){
+    public function VerifyImportantSubDomain($id, $subDomain){
+        $this->lastResult = null;
+
+        if($firstDomain = self::get($id)) {
+            $importantSubDomain = $firstDomain->important_sub_domain;
+
+            if(in_array($subDomain, $importantSubDomain)) {
+                $this->lastResult = $importantSubDomain;
+                return true;
+            } else {
+                return false;
+            }
+        } else {
+            $this->lastResult = "域名不存在";
+            return false;
+        }
         
     }
+
+    
 }
