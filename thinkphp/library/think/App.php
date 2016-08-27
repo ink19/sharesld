@@ -65,6 +65,7 @@ class App
     protected static $routeMust;
 
     protected static $dispatch;
+    protected static $file = [];
 
     /**
      * 执行应用程序
@@ -77,11 +78,18 @@ class App
     {
         is_null($request) && $request = Request::instance();
 
-        if ('ico' == $request->ext()) {
-            throw new HttpException(404, 'ico file not exists');
+        $config = self::initCommon();
+        if (defined('BIND_MODULE')) {
+            // 模块/控制器绑定
+            BIND_MODULE && Route::bind(BIND_MODULE);
+        } elseif ($config['auto_bind_module']) {
+            // 入口自动绑定
+            $name = pathinfo($request->baseFile(), PATHINFO_FILENAME);
+            if ($name && 'index' != $name && is_dir(APP_PATH . $name)) {
+                Route::bind($name);
+            }
         }
 
-        $config = self::initCommon();
         $request->filter($config['default_filter']);
         try {
 
@@ -105,8 +113,13 @@ class App
             // 记录当前调度信息
             $request->dispatch($dispatch);
 
-            // 记录路由信息
-            self::$debug && Log::record('[ ROUTE ] ' . var_export($dispatch, true), 'info');
+            // 记录路由和请求信息
+            if (self::$debug) {
+                Log::record('[ ROUTE ] ' . var_export($dispatch, true), 'info');
+                Log::record('[ HEADER ] ' . var_export($request->header(), true), 'info');
+                Log::record('[ PARAM ] ' . var_export($request->param(), true), 'info');
+            }
+
             // 监听app_begin
             Hook::listen('app_begin', $dispatch);
 
@@ -158,11 +171,6 @@ class App
 
         // 监听app_end
         Hook::listen('app_end', $response);
-
-        // Trace调试注入
-        if (Config::get('app_trace')) {
-            Debug::inject($response);
-        }
 
         return $response;
     }
@@ -325,7 +333,7 @@ class App
         try {
             $instance = Loader::controller($controller, $config['url_controller_layer'], $config['controller_suffix'], $config['empty_controller']);
             if (is_null($instance)) {
-                throw new HttpException(404, 'controller not exists:' . $controller);
+                throw new HttpException(404, 'controller not exists:' . Loader::parseName($controller, 1));
             }
             // 获取当前操作名
             $action = $actionName . $config['action_suffix'];
@@ -377,7 +385,7 @@ class App
                 }
             }
 
-            // 应用命名空间
+            // 注册应用命名空间
             self::$namespace = $config['app_namespace'];
             Loader::addNamespace($config['app_namespace'], APP_PATH);
             if (!empty($config['root_namespace'])) {
@@ -388,8 +396,9 @@ class App
             if (!empty($config['extra_file_list'])) {
                 foreach ($config['extra_file_list'] as $file) {
                     $file = strpos($file, '.') ? $file : APP_PATH . $file . EXT;
-                    if (is_file($file)) {
-                        include_once $file;
+                    if (is_file($file) && !isset(self::$file[$file])) {
+                        include $file;
+                        self::$file[$file] = true;
                     }
                 }
             }
@@ -426,17 +435,17 @@ class App
             // 加载模块配置
             $config = Config::load(CONF_PATH . $module . 'config' . CONF_EXT);
 
-            // 加载应用状态配置
-            if ($config['app_status']) {
-                $config = Config::load(CONF_PATH . $module . $config['app_status'] . CONF_EXT);
-            }
-
             // 读取扩展配置文件
             if ($config['extra_config_list']) {
                 foreach ($config['extra_config_list'] as $name => $file) {
                     $filename = CONF_PATH . $module . $file . CONF_EXT;
                     Config::load($filename, is_string($name) ? $name : pathinfo($filename, PATHINFO_FILENAME));
                 }
+            }
+
+            // 加载应用状态配置
+            if ($config['app_status']) {
+                $config = Config::load(CONF_PATH . $module . $config['app_status'] . CONF_EXT);
             }
 
             // 加载别名文件
@@ -479,10 +488,25 @@ class App
         $check = !is_null(self::$routeCheck) ? self::$routeCheck : $config['url_route_on'];
         if ($check) {
             // 开启路由
-            if (!empty($config['route'])) {
-                // 导入路由配置
-                Route::import($config['route']);
+            if (is_file(RUNTIME_PATH . 'route.php')) {
+                // 读取路由缓存
+                $rules = include RUNTIME_PATH . 'route.php';
+                if (is_array($rules)) {
+                    Route::rules($rules);
+                }
+            } else {
+                $files = $config['route_config_file'];
+                foreach ($files as $file) {
+                    if (is_file(CONF_PATH . $file . CONF_EXT)) {
+                        // 导入路由配置
+                        $rules = include CONF_PATH . $file . CONF_EXT;
+                        if (is_array($rules)) {
+                            Route::import($rules);
+                        }
+                    }
+                }
             }
+
             // 路由检测（根据路由定义返回不同的URL调度）
             $result = Route::check($request, $path, $depr, $config['url_domain_deploy']);
             $must   = !is_null(self::$routeMust) ? self::$routeMust : $config['url_route_must'];

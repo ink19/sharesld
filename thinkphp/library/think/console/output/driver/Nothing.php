@@ -1,32 +1,33 @@
 <?php
 // +----------------------------------------------------------------------
-// | ThinkPHP [ WE CAN DO IT JUST THINK IT ]
+// | ThinkPHP [ WE CAN DO IT JUST THINK ]
 // +----------------------------------------------------------------------
-// | Copyright (c) 2006-2015 http://thinkphp.cn All rights reserved.
+// | Copyright (c) 2006~2015 http://thinkphp.cn All rights reserved.
 // +----------------------------------------------------------------------
 // | Licensed ( http://www.apache.org/licenses/LICENSE-2.0 )
 // +----------------------------------------------------------------------
 // | Author: yunwuxin <448901948@qq.com>
 // +----------------------------------------------------------------------
 
-namespace think\exception;
+namespace think\console\output\driver;
 
-class ClassNotFoundException extends \RuntimeException
+use think\console\Output;
+
+class Nothing
 {
-    protected $class;
-    public function __construct($message, $class = '')
+
+    public function __construct(Output $output)
     {
-        $this->message = $message;
-        $this->class   = $class;
+        // do nothing
     }
 
-    /**
-     * 获取类名
-     * @access public
-     * @return string
-     */
-    public function getClass()
+    public function write($messages, $newline = false, $options = Output::OUTPUT_NORMAL)
     {
-        return $this->class;
+        // do nothing
+    }
+
+    public function renderException(\Exception $e)
+    {
+        // do nothing
     }
 }

@@ -6,8 +6,12 @@ use app\index\model\User;
 
 class Index extends Controller{
     public function index(){
-        $user = User::find(1);
-        cookie('dsf',1);
-        dump($user);
+        $userName = cookie('userName');
+        $password = cookie('password');
+        if($userName && $password) {
+
+        } else {
+
+        }
     }
 }
